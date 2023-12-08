@@ -1,0 +1,45 @@
+name: Update Data and Open PR
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Runs the workflow daily at midnight
+
+jobs:
+  update-data-open-pr:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.x'  # Specify your Python version
+        
+      - name: Install dependencies  # If needed
+        run: pip install -r requirements.txt  # Adjust as per your requirements
+        
+      - name: Run Python script to download data
+        run: python python_tools/database_handler/handler_main.py  # Replace with your script name and arguments
+
+      - name: Run Makefile
+        run: make  # Add the specific target if needed, like `make build`
+
+      - name: Create new branch
+        run: |
+          git checkout -b data-update-branch
+          git add .
+          git commit -m "Update data $(date +%Y-%m-%d)"
+          git push origin data-update-branch
+        
+      - name: Open PR to testing branch
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "Update data $(date +%Y-%m-%d)"
+          branch: data-update-branch
+          title: "Data Update $(date +%Y-%m-%d)"
+          body: "This PR updates the data."
+          labels: "data update"
+          base: "testing"
